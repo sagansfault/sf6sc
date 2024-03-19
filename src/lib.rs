@@ -52,6 +52,11 @@ impl SuperComboData {
         }
         None
     }
+
+    pub fn get_character_move_by_input(&self, character_query: &str, input_query: &str) -> Option<&Move> {
+        let character = self.get_character_search(character_query)?;
+        self.get_move_by_input(&character.character_id, input_query)
+    }
 }
 
 #[tokio::test]
