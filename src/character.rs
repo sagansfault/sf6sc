@@ -142,9 +142,20 @@ pub mod loader {
         let document = scraper::Html::parse_document(&body);
         let block_select = document.select(&BLOCK_SELECTOR);
         for ele in block_select {
-            if let Some(move_loaded) = parse_block(ele) {
-                moves.push(move_loaded);
+            match parse_block(ele) {
+                Ok(move_loaded) => {
+                    moves.push(move_loaded);
+                }
+                Err(err) => {
+                    println!("skipping move for: {:?}: {:?}", character.name, err);
+                }
             }
+            // if let Some(move_loaded) = parse_block(ele) {
+            //     moves.push(move_loaded);
+            // } else {
+            //     let input = ele.select(&INPUT_SELECTOR).next().map(|e| e.inner_html());
+            //     println!("skipping move for: {:?}: {:?}", character.name, input);
+            // }
         }
         Ok(moves)
     }
@@ -158,42 +169,38 @@ pub mod loader {
 
     static INPUT_SELECTOR: Lazy<Selector> = Lazy::new(|| Selector::parse("tr > th > div > p > span").unwrap());
     static NAME_SELECTOR: Lazy<Selector> = Lazy::new(|| Selector::parse("tr > th > div > div").unwrap());
-    static HITBOX_IMAGE_ELEMENT_SELECTOR: Lazy<Selector> = Lazy::new(|| Selector::parse("tr > th > a > img").unwrap());
+    static HITBOX_IMAGE_ELEMENT_SELECTOR: Lazy<Selector> = Lazy::new(|| Selector::parse("tr > th > a").unwrap());
     static HITBOX_IMAGE_URL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(/images/thumb\S+) 2x").unwrap());
     static DATA_ROW_SELECTOR: Lazy<Selector> = Lazy::new(|| Selector::parse("tr > td").unwrap());
+    const DEFAULT_IMAGE: &str = "https://wiki.supercombo.gg/images/thumb/4/42/SF6_Logo.png/300px-SF6_Logo.png";
 
-    pub(crate) fn parse_block(block: ElementRef) -> Option<Move> {
+    pub(crate) fn parse_block(block: ElementRef) -> Result<Move, &str> {
         let Some(input) = block.select(&INPUT_SELECTOR)
             .next()
             .map(|e| e.inner_html()) else {
-            return None;
+            return Err("no input");
         };
         let regex = {
-            let mut r = input.replace(".", ".?");
-            r = regex::escape(&r);
+            let r = input.replace(".", ".?");
+            let r = r.replace(" ", "");
+            let mut r = r.replace("~", "\\~");
             r = format!("(?i)^({})$", r);
             r
         };
         let Ok(regex) = Regex::new(&regex) else {
-            return None;
+            return Err("regex load err");
         };
         let Some(name) = block.select(&NAME_SELECTOR)
             .next()
             .map(|e| e.inner_html()) else {
-            return None;
+            return Err("no name");
         };
         // need to initialize this as its own variable first since 'e' is consumed
-        let Some(hitbox_image_url_html) = block.select(&HITBOX_IMAGE_ELEMENT_SELECTOR)
-            .skip(1) // first image is non-hitbox image
-            .next()
-            .map(|e| e.html()) else {
-            return None;
-        };
-        let Some(hitbox_image_url) = HITBOX_IMAGE_URL_REGEX.captures(hitbox_image_url_html.as_str())
-            .and_then(|caps| caps.get(1))// skip first match: is whole match
-            .map(|m| m.as_str().to_string())
-            .map(|s| format!("https://wiki.supercombo.gg/{}", s)) else {
-            return None;
+        let mut select = block.select(&HITBOX_IMAGE_ELEMENT_SELECTOR).map(|e| e.html());
+        let hitbox_image_url = {
+            let image = select.next().and_then(|s| hitbox_image_matcher(s));
+            let hitbox = select.next().and_then(|s| hitbox_image_matcher(s));
+            hitbox.or(image).unwrap_or_else(|| DEFAULT_IMAGE.to_string())
         };
         let mut data = block.select(&DATA_ROW_SELECTOR)
             .map(|e| get_lowest_child(e))
@@ -229,7 +236,7 @@ pub mod loader {
             hitbox_image_url,
             notes,
         };
-        Some(move_constructed)
+        Ok(move_constructed)
     }
 
     fn get_lowest_child(parent: ElementRef) -> ElementRef {
@@ -237,5 +244,12 @@ pub mod loader {
             None => parent,
             Some(child) => get_lowest_child(child)
         }
+    }
+
+    fn hitbox_image_matcher(element: String) -> Option<String> {
+        HITBOX_IMAGE_URL_REGEX.captures(element.as_str())
+            .and_then(|caps| caps.get(1))// skip first match: is whole match
+            .map(|m| m.as_str().to_string())
+            .map(|s| format!("https://wiki.supercombo.gg/{}", s))
     }
 }

@@ -62,5 +62,9 @@ impl SuperComboData {
 #[tokio::test]
 async fn test() {
     let data = load_supercombo_data().await;
-    println!("{:?}", data.get_move_by_input(&character::GUILE, "5MP~4HP"));
+    let cammy = data.get_moves(&character::CAMMY).unwrap();
+    // for m in cammy.into_iter() {
+    //     println!("{:?} :: {:?}", m.input, m.input_matcher);
+    // }
+    // println!("{:?}", data.get_character_move_by_input("ryu", "214HP"));
 }
