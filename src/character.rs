@@ -200,10 +200,7 @@ pub mod loader {
         let hitbox_image_url = {
             let image = select.next().and_then(|s| hitbox_image_matcher(s));
             let hitbox = select.next().and_then(|s| hitbox_image_matcher(s));
-            hitbox.or(image).unwrap_or_else(|| {
-                println!("no image, using default");
-                DEFAULT_IMAGE.to_string()
-            })
+            hitbox.or(image).unwrap_or_else(|| DEFAULT_IMAGE.to_string())
         };
         let mut data = block.select(&DATA_ROW_SELECTOR)
             .map(|e| get_lowest_child(e))
