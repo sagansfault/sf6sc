@@ -146,16 +146,10 @@ pub mod loader {
                 Ok(move_loaded) => {
                     moves.push(move_loaded);
                 }
-                Err(err) => {
-                    println!("skipping move for: {:?}: {:?}", character.name, err);
+                Err(_err) => {
+                    //println!("skipping move for: {:?}: {:?}", character.name, err);
                 }
             }
-            // if let Some(move_loaded) = parse_block(ele) {
-            //     moves.push(move_loaded);
-            // } else {
-            //     let input = ele.select(&INPUT_SELECTOR).next().map(|e| e.inner_html());
-            //     println!("skipping move for: {:?}: {:?}", character.name, input);
-            // }
         }
         Ok(moves)
     }
@@ -181,9 +175,9 @@ pub mod loader {
             return Err("no input");
         };
         let regex = {
-            let r = input.replace(".", ".?");
-            let r = r.replace(" ", "");
-            let mut r = r.replace("~", "\\~");
+            let r = regex::escape(&input);
+            let r = r.replace(".", ".?");
+            let mut r = r.replace(" ", "");
             r = format!("(?i)^({})$", r);
             r
         };
