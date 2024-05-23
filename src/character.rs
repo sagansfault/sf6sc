@@ -24,14 +24,15 @@ pub static ZANGIEF: Lazy<CharacterId> = Lazy::new(|| CharacterId::new(17, "Zangi
 pub static RASHID: Lazy<CharacterId> = Lazy::new(|| CharacterId::new(18, "Rashid", r"(?i)(rashid)"));
 pub static AKI: Lazy<CharacterId> = Lazy::new(|| CharacterId::new(19, "A.K.I.", r"(?i)(a.?k.?i.?)"));
 pub static ED: Lazy<CharacterId> = Lazy::new(|| CharacterId::new(20, "Ed", r"(?i)(ed)"));
+pub static AKUMA: Lazy<CharacterId> = Lazy::new(|| CharacterId::new(20, "Akuma", r"(?i)(akuma|gouki)"));
 
-static CHARACTER_IDS: Lazy<[&CharacterId; 21]> = Lazy::new(|| [
+static CHARACTER_IDS: Lazy<Vec<&CharacterId>> = Lazy::new(|| vec!(
     &BLANKA, &CAMMY, &CHUN_LI, &DEE_JAY, &DHALSIM, &HONDA, &GUILE, &JAMIE, &JP, &JURI, &KEN,
-    &KIMBERLY, &LILY, &LUKE, &MANON, &MARISA, &RYU, &ZANGIEF, &RASHID, &AKI, &ED
-]);
+    &KIMBERLY, &LILY, &LUKE, &MANON, &MARISA, &RYU, &ZANGIEF, &RASHID, &AKI, &ED, &AKUMA
+));
 
 pub fn get_character_regex<'a>(name: String) -> Option<&'a CharacterId> {
-    (*CHARACTER_IDS).into_iter().find(|&character| character.matcher.is_match(&name))
+    CHARACTER_IDS.clone().into_iter().find(|&character| character.matcher.is_match(&name))
 }
 
 #[derive(Clone, Debug)]
@@ -108,7 +109,7 @@ pub mod loader {
     pub(crate) async fn load_characters() -> Vec<Character> {
         let mut characters = vec![];
         let mut join_set = JoinSet::new();
-        for character_id in (*CHARACTER_IDS).into_iter() {
+        for character_id in (*CHARACTER_IDS).iter() {
             join_set.spawn(load_character(character_id));
         }
         while let Some(res) = join_set.join_next().await {
